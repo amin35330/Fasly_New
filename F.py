@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Call
 from telegram.error import BadRequest
 
 # تنظیمات اولیه
-BOT_TOKEN = 'YOUR_BOT_TOKEN'
+BOT_TOKEN = '7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM'
 EXCEL_FILE = 'data.xlsx'
 
 logging.basicConfig(
