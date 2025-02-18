@@ -119,14 +119,20 @@ async def start_web_server():
 
 # تابع اصلی
 async def main():
-    asyncio.create_task(start_web_server())
+    web_server_task = asyncio.create_task(start_web_server())
     application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", send_project_buttons))
     application.add_handler(CallbackQueryHandler(button_click))
     try:
-        await application.run_polling()
+        # تنظیم close_loop=False مانع از بسته شدن حلقه رویداد پس از اتمام polling می‌شود
+        await application.run_polling(close_loop=False)
     except Exception as e:
         logger.error(f"خطا در اجرای بات: {e}")
+        # در صورت بروز خطا، shutdown و stop بوت به صورت graceful انجام می‌شود
+        await application.shutdown()
+        await application.stop()
+    finally:
+        web_server_task.cancel()
 
 # اجرای امن برنامه
 if __name__ == "__main__":
