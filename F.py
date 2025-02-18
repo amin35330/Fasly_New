@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Call
 from telegram.error import BadRequest
 
 # تنظیمات اولیه
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "توکن_خود_را_اینجا_قرار_دهید")
+BOT_TOKEN = os.getenv("7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM")
 EXCEL_FILE = "data.xlsx"
 
 logging.basicConfig(
