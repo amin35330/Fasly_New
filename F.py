@@ -9,7 +9,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Call
 from telegram.error import BadRequest
 
 # تنظیمات اولیه
-BOT_TOKEN = '7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM'
+BOT_TOKEN = '7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM'  # حتماً توکن واقعی را جایگزین کنید
 EXCEL_FILE = 'data.xlsx'
 
 logging.basicConfig(
@@ -56,12 +56,12 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
     navigation_buttons = []
 
     if page > 0:
-        navigation_buttons.append(InlineKeyboardButton("⏮ اولین صفحه", callback_data="page_0"))
-        navigation_buttons.append(InlineKeyboardButton("⬅️ صفحه قبلی", callback_data=f"page_{page - 1}"))
+        navigation_buttons.append(InlineKeyboardButton("⏮", callback_data="page_0"))  # اولین صفحه
+        navigation_buttons.append(InlineKeyboardButton("⬅️", callback_data=f"page_{page - 1}"))  # صفحه قبلی
 
     if page < total_pages - 1:
-        navigation_buttons.append(InlineKeyboardButton("صفحه بعدی ➡️", callback_data=f"page_{page + 1}"))
-        navigation_buttons.append(InlineKeyboardButton("⏭ آخرین صفحه", callback_data=f"page_{total_pages - 1}"))
+        navigation_buttons.append(InlineKeyboardButton("➡️", callback_data=f"page_{page + 1}"))  # صفحه بعدی
+        navigation_buttons.append(InlineKeyboardButton("⏭", callback_data=f"page_{total_pages - 1}"))  # آخرین صفحه
 
     if navigation_buttons:
         keyboard.append(navigation_buttons)
@@ -72,9 +72,8 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
         if update.message:
             await update.message.reply_text("لیست پروژه‌ها:", reply_markup=reply_markup)
         else:
-            current_markup = update.callback_query.message.reply_markup
-            if current_markup.to_json() != reply_markup.to_json():
-                await update.callback_query.message.edit_reply_markup(reply_markup)
+            if update.callback_query:
+                await update.callback_query.edit_message_reply_markup(reply_markup)
     except BadRequest as e:
         logger.warning(f"خطای ویرایش پیام: {e}")
 
@@ -111,6 +110,21 @@ async def button_click(update: Update, context: CallbackContext) -> None:
 async def error_handler(update: object, context: CallbackContext) -> None:
     logger.error(f"خطای بات: {context.error}")
 
+# جلوگیری از اجرای همزمان چند نمونه از بات
+async def ensure_single_instance():
+    pid_file = "bot.pid"
+
+    if os.path.exists(pid_file):
+        with open(pid_file, "r") as f:
+            old_pid = f.read().strip()
+        
+        if old_pid and os.system(f"kill -0 {old_pid}") == 0:
+            logger.error("یک نمونه از بات در حال اجرا است! خروج از برنامه...")
+            exit(1)
+
+    with open(pid_file, "w") as f:
+        f.write(str(os.getpid()))
+
 # وب سرور برای باز بودن پورت در Render
 async def start_web_server():
     app = web.Application()
@@ -124,12 +138,13 @@ async def start_web_server():
 
 # تابع اصلی اجرا کننده بات
 async def main() -> None:
+    await ensure_single_instance()  # چک کردن اجرای تکراری
+
     asyncio.create_task(start_web_server())
 
     application = Application.builder().token(BOT_TOKEN).build()
 
-    application.add_handler(CommandHandler("Start", send_project_buttons))
-    application.add_handler(CommandHandler("Fasly", send_project_buttons))
+    application.add_handler(CommandHandler("start", send_project_buttons))
     application.add_handler(CallbackQueryHandler(button_click))
 
     application.add_error_handler(error_handler)
