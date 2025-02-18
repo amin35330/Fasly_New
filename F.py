@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Call
 from telegram.error import BadRequest
 
 # تنظیمات اولیه
-BOT_TOKEN = "7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM"  # توکن را اینجا قرار بده
+BOT_TOKEN = os.getenv("BOT_TOKEN", "7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM")
 EXCEL_FILE = "data.xlsx"
 
 # تنظیمات لاگ‌گیری
@@ -18,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# تابع ارسال لیست پروژه‌ها با صفحه‌بندی
+# تابع ارسال لیست پروژه‌ها
 async def send_project_buttons(update: Update, context: CallbackContext, page=0):
     try:
         df = pd.read_excel(EXCEL_FILE, dtype={"Users": str})
@@ -55,29 +55,22 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
     if row_buttons:
         keyboard.append(row_buttons)
 
-    # دکمه‌های ناوبری
     navigation_buttons = []
-
     if page > 0:
         navigation_buttons.append(InlineKeyboardButton("⏮", callback_data="page_0"))
         navigation_buttons.append(InlineKeyboardButton("⬅️", callback_data=f"page_{page - 1}"))
-
     if page < total_pages - 1:
         navigation_buttons.append(InlineKeyboardButton("➡️", callback_data=f"page_{page + 1}"))
         navigation_buttons.append(InlineKeyboardButton("⏭", callback_data=f"page_{total_pages - 1}"))
-
     if navigation_buttons:
         keyboard.append(navigation_buttons)
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-
     try:
         if update.message:
             await update.message.reply_text("لیست پروژه‌ها:", reply_markup=reply_markup)
         else:
-            current_markup = update.callback_query.message.reply_markup
-            if current_markup.to_json() != reply_markup.to_json():
-                await update.callback_query.message.edit_reply_markup(reply_markup)
+            await update.callback_query.message.edit_reply_markup(reply_markup)
     except BadRequest as e:
         logger.warning(f"خطای ویرایش پیام: {e}")
 
@@ -85,7 +78,6 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
 async def button_click(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
-
     try:
         df = pd.read_excel(EXCEL_FILE, dtype={"Users": str})
     except Exception as e:
@@ -93,7 +85,6 @@ async def button_click(update: Update, context: CallbackContext):
         return
 
     callback_data = query.data
-
     if callback_data.startswith("page_"):
         page = int(callback_data.split("_")[1])
         await send_project_buttons(update, context, page)
@@ -115,44 +106,34 @@ async def button_click(update: Update, context: CallbackContext):
         df.to_excel(EXCEL_FILE, index=False)
         await send_project_buttons(update, context, page)
 
-# خطایاب برای جلوگیری از کرش کردن بات
-async def error_handler(update: object, context: CallbackContext):
-    logger.error(f"خطای بات: {context.error}")
-
-# وب سرور برای باز بودن پورت در Render
+# وب سرور برای Render
 async def start_web_server():
     app = web.Application()
     app.router.add_get("/", lambda request: web.Response(text="OK"))
     runner = web.AppRunner(app)
     await runner.setup()
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
     logger.info(f"وب سرور در پورت {port} اجرا شد.")
 
-# تابع اصلی اجرا کننده بات
+# تابع اصلی
 async def main():
     asyncio.create_task(start_web_server())
-
-    application = (
-        Application.builder().token(BOT_TOKEN).build()
-    )
-
+    application = Application.builder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", send_project_buttons))
-    application.add_handler(CommandHandler("fasly", send_project_buttons))
     application.add_handler(CallbackQueryHandler(button_click))
-
-    application.add_error_handler(error_handler)
-
-    await application.run_polling()
-
-# اجرای امن برنامه برای محیط‌هایی که رویداد `asyncio` از قبل در حال اجرا است
-if __name__ == "__main__":
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(main())
-        else:
-            loop.run_until_complete(main())
-    except RuntimeError:
+        await application.run_polling()
+    except Exception as e:
+        logger.error(f"خطا در اجرای بات: {e}")
+
+# اجرای امن برنامه
+if __name__ == "__main__":
+    import sys
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    try:
         asyncio.run(main())
+    except RuntimeError as e:
+        logger.error(f"خطا در اجرای asyncio: {e}")
