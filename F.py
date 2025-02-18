@@ -146,5 +146,13 @@ async def main():
 
     await application.run_polling()
 
+# اجرای امن برنامه برای محیط‌هایی که رویداد `asyncio` از قبل در حال اجرا است
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(main())
+        else:
+            loop.run_until_complete(main())
+    except RuntimeError:
+        asyncio.run(main())
