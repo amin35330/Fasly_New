@@ -1,25 +1,32 @@
+import os
 import logging
 import pandas as pd
 import asyncio
 import nest_asyncio
+from aiohttp import web
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, CallbackContext
 
-# تنظیمات اولیه برای ورود به فایل اکسل و توکن بات
+# ====================
+# تنظیمات اولیه
+# ====================
 BOT_TOKEN = '7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM'
 EXCEL_FILE = 'data.xlsx'
 
-# تنظیمات لاگ برای دیباگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
-# اعمال nest_asyncio
+# اعمال nest_asyncio برای حل مشکلات event loop
 nest_asyncio.apply()
 
-# تابع برای خوش‌آمدگویی و نمایش پیام اولیه
+# ====================
+# بخش تلگرام
+# ====================
+
+# تابع شروع برای نمایش پیام خوش‌آمدگویی و ارسال دکمه‌های پروژه‌ها
 async def start(update: Update, context: CallbackContext) -> None:
     welcome_message = (
         "همکاران عزیز و گرامی ☘️  \n"
@@ -33,15 +40,15 @@ async def start(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(welcome_message)
     await send_project_buttons(update, context)
 
-# تابع برای ارسال دکمه‌های پروژه‌ها (با صفحه‌بندی)
+# تابع ارسال دکمه‌های پروژه با صفحه‌بندی
 async def send_project_buttons(update: Update, context: CallbackContext, page=0) -> None:
-    df = pd.read_excel(EXCEL_FILE, dtype={'Users': str})  # تعیین نوع ستون 'Users' به عنوان رشته
+    df = pd.read_excel(EXCEL_FILE, dtype={'Users': str})
     start_idx = page * 16
     end_idx = start_idx + 16
     projects = df.iloc[start_idx:end_idx]
 
     keyboard = []
-    row = []
+    row_buttons = []
     for idx, row_data in projects.iterrows():
         project_name = row_data['Project']
         user = row_data['Users']
@@ -50,16 +57,16 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
             button_text = f"🔵 {project_name}"
         else:
             button_text = f"✅ {project_name} - {user}"
-        row.append(InlineKeyboardButton(button_text, callback_data=callback_data))
+        row_buttons.append(InlineKeyboardButton(button_text, callback_data=callback_data))
 
-        if len(row) == 2:
-            keyboard.append(row)
-            row = []
+        if len(row_buttons) == 2:
+            keyboard.append(row_buttons)
+            row_buttons = []
 
-    if row:
-        keyboard.append(row)
+    if row_buttons:
+        keyboard.append(row_buttons)
 
-    # افزودن دکمه‌های کنترل صفحه
+    # افزودن دکمه‌های ناوبری صفحات
     navigation_buttons = []
     if page > 0:
         navigation_buttons.append(InlineKeyboardButton("⬅️ صفحه قبلی", callback_data=f"page_{page - 1}"))
@@ -74,36 +81,39 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
     else:
         await update.callback_query.message.edit_reply_markup(reply_markup)
 
-# تابع برای مدیریت کلیک دکمه‌های پروژه‌ها
+# مدیریت کلیک دکمه‌ها
 async def button_click(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     await query.answer()
-    df = pd.read_excel(EXCEL_FILE, dtype={'Users': str})  # تعیین نوع ستون 'Users' به عنوان رشته
+    df = pd.read_excel(EXCEL_FILE, dtype={'Users': str})
     callback_data = query.data
 
-    # بررسی کلیک دکمه‌های صفحه‌بندی
+    # اگر دکمه صفحه‌بندی فشرده شد
     if callback_data.startswith("page_"):
         page = int(callback_data.split("_")[1])
         await send_project_buttons(update, context, page)
         return
 
     if callback_data.startswith("project_"):
-        project_index, page = map(int, callback_data.split("_")[1:])
-        project_name = df.iloc[project_index - page * 16]['Project']
+        parts = callback_data.split("_")
+        project_index = int(parts[1])
+        page = int(parts[2])
+        df_index = project_index - page * 16
+        project_name = df.iloc[df_index]['Project']
         user_name = query.from_user.username
 
         # به‌روزرسانی کاربر مربوط به پروژه
-        if pd.isna(df.at[project_index - page * 16, 'Users']) or df.at[project_index - page * 16, 'Users'] == 'nan':
-            df.at[project_index - page * 16, 'Users'] = user_name
-        elif df.at[project_index - page * 16, 'Users'] == user_name:
-            df.at[project_index - page * 16, 'Users'] = pd.NA
+        if pd.isna(df.at[df_index, 'Users']) or df.at[df_index, 'Users'] == 'nan':
+            df.at[df_index, 'Users'] = user_name
+        elif df.at[df_index, 'Users'] == user_name:
+            df.at[df_index, 'Users'] = pd.NA
 
         df.to_excel(EXCEL_FILE, index=False)
         await send_project_buttons(update, context, page)
 
-# تابع برای انتقال پروژه‌های انجام‌شده به شیت جدید
+# انتقال پروژه‌های انجام شده به شیت جدید
 def move_done_projects() -> None:
-    df = pd.read_excel(EXCEL_FILE, dtype={'Users': str})  # تعیین نوع ستون 'Users' به عنوان رشته
+    df = pd.read_excel(EXCEL_FILE, dtype={'Users': str})
     done_projects = df.dropna(subset=['Users'])
     if not done_projects.empty:
         with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='a') as writer:
@@ -111,17 +121,40 @@ def move_done_projects() -> None:
         df.drop(done_projects.index, inplace=True)
         df.to_excel(EXCEL_FILE, index=False)
 
+# ====================
+# بخش وب سرور (برای باز بودن پورت در Render)
+# ====================
+
+async def start_web_server():
+    app = web.Application()
+    # یک endpoint ساده برای پاسخ دادن به درخواست‌های ورودی
+    app.router.add_get('/', lambda request: web.Response(text="OK"))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    port = int(os.environ.get("PORT", 5000))
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info(f"Web server started on port {port}")
+
+# ====================
+# تابع اصلی
+# ====================
+
 async def main() -> None:
+    # انتقال پروژه‌های انجام شده به شیت جدید
     move_done_projects()
 
-    # ایجاد و تنظیم برنامه تلگرام
+    # راه‌اندازی سرور وب به عنوان یک تسک پس‌زمینه (برای باز بودن پورت مورد نیاز Render)
+    asyncio.create_task(start_web_server())
+
+    # ایجاد و پیکربندی اپلیکیشن تلگرام
     application = Application.builder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("Start", start))
     application.add_handler(CommandHandler("Fasly", start))
     application.add_handler(CallbackQueryHandler(button_click))
 
-    # شروع polling
+    # شروع polling برای دریافت پیام‌ها
     await application.run_polling()
 
 if __name__ == '__main__':
