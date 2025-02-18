@@ -8,24 +8,29 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Call
 from telegram.error import BadRequest
 
 # تنظیمات اولیه
-BOT_TOKEN = os.getenv("7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM")
+BOT_TOKEN = "7403744632:AAFbcK2CQPFYVZrCXHF1eISEeNs2Hi0QAUM"  # توکن را اینجا قرار بده
 EXCEL_FILE = "data.xlsx"
 
+# تنظیمات لاگ‌گیری
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
 
-
 # تابع ارسال لیست پروژه‌ها با صفحه‌بندی
-async def send_project_buttons(update: Update, context: CallbackContext, page=0) -> None:
-    df = pd.read_excel(EXCEL_FILE, dtype={"Users": str})
+async def send_project_buttons(update: Update, context: CallbackContext, page=0):
+    try:
+        df = pd.read_excel(EXCEL_FILE, dtype={"Users": str})
+    except Exception as e:
+        logger.error(f"خطا در خواندن فایل اکسل: {e}")
+        return
+
     projects_per_page = 16
     total_pages = (len(df) // projects_per_page) + (1 if len(df) % projects_per_page > 0 else 0)
 
     start_idx = page * projects_per_page
-    end_idx = start_idx + projects_per_page
+    end_idx = min(start_idx + projects_per_page, len(df))
     projects = df.iloc[start_idx:end_idx]
 
     keyboard = []
@@ -52,6 +57,7 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
 
     # دکمه‌های ناوبری
     navigation_buttons = []
+
     if page > 0:
         navigation_buttons.append(InlineKeyboardButton("⏮", callback_data="page_0"))
         navigation_buttons.append(InlineKeyboardButton("⬅️", callback_data=f"page_{page - 1}"))
@@ -69,17 +75,23 @@ async def send_project_buttons(update: Update, context: CallbackContext, page=0)
         if update.message:
             await update.message.reply_text("لیست پروژه‌ها:", reply_markup=reply_markup)
         else:
-            await update.callback_query.message.edit_reply_markup(reply_markup)
+            current_markup = update.callback_query.message.reply_markup
+            if current_markup.to_json() != reply_markup.to_json():
+                await update.callback_query.message.edit_reply_markup(reply_markup)
     except BadRequest as e:
         logger.warning(f"خطای ویرایش پیام: {e}")
 
-
 # تابع مدیریت کلیک دکمه‌ها
-async def button_click(update: Update, context: CallbackContext) -> None:
+async def button_click(update: Update, context: CallbackContext):
     query = update.callback_query
     await query.answer()
 
-    df = pd.read_excel(EXCEL_FILE, dtype={"Users": str})
+    try:
+        df = pd.read_excel(EXCEL_FILE, dtype={"Users": str})
+    except Exception as e:
+        logger.error(f"خطا در خواندن فایل اکسل: {e}")
+        return
+
     callback_data = query.data
 
     if callback_data.startswith("page_"):
@@ -103,44 +115,36 @@ async def button_click(update: Update, context: CallbackContext) -> None:
         df.to_excel(EXCEL_FILE, index=False)
         await send_project_buttons(update, context, page)
 
-
 # خطایاب برای جلوگیری از کرش کردن بات
-async def error_handler(update: object, context: CallbackContext) -> None:
+async def error_handler(update: object, context: CallbackContext):
     logger.error(f"خطای بات: {context.error}")
 
-
-# وب سرور برای webhook (جایگزین polling)
-async def start_web_server(application):
+# وب سرور برای باز بودن پورت در Render
+async def start_web_server():
     app = web.Application()
-    app.router.add_post(f"/{BOT_TOKEN}", application.update_queue.put)
+    app.router.add_get("/", lambda request: web.Response(text="OK"))
     runner = web.AppRunner(app)
     await runner.setup()
-    port = int(os.getenv("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    logger.info(f"Webhook server started on port {port}")
-
+    logger.info(f"وب سرور در پورت {port} اجرا شد.")
 
 # تابع اصلی اجرا کننده بات
-async def main() -> None:
-    application = Application.builder().token(BOT_TOKEN).build()
+async def main():
+    asyncio.create_task(start_web_server())
+
+    application = (
+        Application.builder().token(BOT_TOKEN).build()
+    )
 
     application.add_handler(CommandHandler("start", send_project_buttons))
-    application.add_handler(CommandHandler("projects", send_project_buttons))
+    application.add_handler(CommandHandler("fasly", send_project_buttons))
     application.add_handler(CallbackQueryHandler(button_click))
 
     application.add_error_handler(error_handler)
 
-    # تنظیم webhook
-    webhook_url = f"https://your_domain.com/{BOT_TOKEN}"
-    await application.bot.set_webhook(webhook_url)
-
-    await start_web_server(application)
-
-    logger.info("Bot is running...")
-    await asyncio.Event().wait()
-
+    await application.run_polling()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.run(main())
