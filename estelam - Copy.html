@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" id="htmlRoot">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سیستم استعلام لجستیک</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'IranSans';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/iran-sans-font@v1.0.0/dist/IranSans.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        
+        body {
+            font-family: 'IranSans', Arial, sans-serif;
+        }
+        
+        [lang="fa"] {
+            direction: rtl;
+            text-align: right;
+        }
+        
+        [lang="en"], [lang="zh"] {
+            direction: ltr;
+            text-align: left;
+        }
+        
+        .sidebar {
+            width: 280px;
+            transition: all 0.3s;
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        
+        .sidebar.collapsed .menu-text {
+            display: none;
+        }
+        
+        .sidebar.collapsed .menu-icon {
+            margin-left: 0;
+        }
+        
+        .main-content {
+            transition: all 0.3s;
+        }
+        
+        .main-content.expanded {
+            margin-right: 80px;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .inquiry-status-draft {
+            background-color: #FEF3C7;
+            color: #92400E;
+        }
+        
+        .inquiry-status-approved {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+        
+        .inquiry-status-rejected {
+            background-color: #FEE2E2;
+            color: #B91C1C;
+        }
+        
+        .ticket-status-open {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+        
+        .ticket-status-closed {
+            background-color: #E5E7EB;
+            color: #374151;
+        }
+        
+        .ticket-priority-high {
+            background-color: #FEE2E2;
+            color: #B91C1C;
+        }
+        
+        .ticket-priority-medium {
+            background-color: #FEF3C7;
+            color: #92400E;
+        }
+        
+        .ticket-priority-low {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+        
+        /* RTL specific adjustments */
+        .menu-icon {
+            margin-left: 0.75rem;
+            margin-right: 0;
+        }
+        
+        .ml-1, .ml-2, .ml-3, .ml-4 {
+            margin-left: 0 !important;
+        }
+        
+        .ml-1 {
+            margin-right: 0.25rem !important;
+        }
+        
+        .ml-2 {
+            margin-right: 0.5rem !important;
+        }
+        
+        .ml-3 {
+            margin-right: 0.75rem !important;
+        }
+        
+        .ml-4 {
+            margin-right: 1rem !important;
+        }
+        
+        .mr-1, .mr-2, .mr-3, .mr-4 {
+            margin-right: 0 !important;
+        }
+        
+        .mr-1 {
+            margin-left: 0.25rem !important;
+        }
+        
+        .mr-2 {
+            margin-left: 0.5rem !important;
+        }
+        
+        .mr-3 {
+            margin-left: 0.75rem !important;
+        }
+        
+        .mr-4 {
+            margin-left: 1rem !important;
+        }
+        
+        .text-left {
+            text-align: right !important;
+        }
+        
+        .text-right {
+            text-align: left !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar -->
+        <div class="sidebar bg-indigo-800 text-white flex flex-col">
+            <div class="p-4 flex items-center justify-between">
+                <div class="flex items-center">
+                    <svg class="h-8 w-8 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="mr-2 text-xl font-bold menu-text">سیستم لجستیک</span>
+                </div>
+                <button id="collapse-btn" class="text-indigo-300 hover:text-white">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 19l7-7-7-7m-8 14l7-7-7-7" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <nav class="mt-5 px-2">
+                    <a href="#dashboard" class="menu-item group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-indigo-900">
+                        <svg class="menu-icon h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        <span class="menu-text" data-en="Dashboard" data-fa="داشبورد" data-zh="仪表板">داشبورد</span>
+                    </a>
+                    <a href="#inquiries" class="menu-item group flex items-center px-2 py-2 text-base font-medium rounded-md text-indigo-100 hover:bg-indigo-700">
+                        <svg class="menu-icon h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <span class="menu-text" data-en="Inquiries" data-fa="استعلام‌ها" data-zh="查询">استعلام‌ها</span>
+                    </a>
+                    <a href="#approved" class="menu-item group flex items-center px-2 py-2 text-base font-medium rounded-md text-indigo-100 hover:bg-indigo-700">
+                        <svg class="menu-icon h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="menu-text" data-en="Approved" data-fa="تایید شده" data-zh="已批准">تایید شده</span>
+                    </a>
+                    <a href="#tickets" class="menu-item group flex items-center px-2 py-2 text-base font-medium rounded-md text-indigo-100 hover:bg-indigo-700">
+                        <svg class="menu-icon h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span class="menu-text" data-en="Tickets" data-fa="تیکت‌ها" data-zh="工单">تیکت‌ها</span>
+                    </a>
+                    <a href="#settings" class="menu-item group flex items-center px-2 py-2 text-base font-medium rounded-md text-indigo-100 hover:bg-indigo-700">
+                        <svg class="menu-icon h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="menu-text" data-en="Settings" data-fa="تنظیمات" data-zh="设置">تنظیمات</span>
+                    </a>
+                    <a href="#users" class="menu-item group flex items-center px-2 py-2 text-base font-medium rounded-md text-indigo-100 hover:bg-indigo-700">
+                        <svg class="menu-icon h-6 w-6 text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <span class="menu-text" data-en="Users" data-fa="کاربران" data-zh="用户">کاربران</span>
+                    </a>
+                </nav>
+            </div>
+            <div class="p-4 border-t border-indigo-700">
+                <div class="flex items-center">
+                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="User avatar">
+                    <div class="mr-3 menu-text">
+                        <p class="text-sm font-medium text-white" data-en="Admin User" data-fa="کاربر مدیر" data-zh="管理员">کاربر مدیر</p>
+                        <p class="text-xs font-medium text-indigo-300" data-en="Administrator" data-fa="مدیر سیستم" data-zh="系统管理员">مدیر سیستم</p>
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between">
+                    <button class="flex items-center text-sm font-medium text-indigo-300 hover:text-white">
+                        <svg class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span class="menu-text" data-en="Profile" data-fa="پروفایل" data-zh="个人资料">پروفایل</span>
+                    </button>
+                    <button class="flex items-center text-sm font-medium text-indigo-300 hover:text-white">
+                        <svg class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span class="menu-text" data-en="Logout" data-fa="خروج" data-zh="登出">خروج</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content flex-1 overflow-x-hidden overflow-y-auto bg-gray-100">
+            <div class="container mx-auto px-6 py-8">
+                <!-- Header with Language Selector -->
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold text-gray-800" data-en="Dashboard" data-fa="داشبورد" data-zh="仪表板">داشبورد</h1>
+                    <div class="flex items-center">
+                        <div class="relative ml-4">
+                            <select id="language-selector" class="block appearance-none bg-white border border-gray-300 hover:border-gray-400 px-4 py-2 pl-8 rounded shadow leading-tight focus:outline-none focus:shadow-outline">
+                                <option value="fa">فارسی</option>
+                                <option value="en">English</option>
+                                <option value="zh">中文</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-2 text-gray-700">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <button class="flex items-center text-gray-500 hover:text-gray-700">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <span class="mr-1 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs">3</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Content -->
+                <div id="dashboard-content" class="tab-content active">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-indigo-100 text-indigo-500">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm font-medium text-gray-500" data-en="Total Inquiries" data-fa="کل استعلام‌ها" data-zh="总查询">کل استعلام‌ها</p>
+                                    <p class="text-2xl font-semibold text-gray-800">248</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="flex items-center">
+                                    <span class="text-green-500 text-sm font-semibold">+12%</span>
+                                    <span class="text-gray-500 text-sm mr-2" data-en="from last month" data-fa="از ماه گذشته" data-zh="较上月">از ماه گذشته</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-green-100 text-green-500">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm font-medium text-gray-500" data-en="Approved Inquiries" data-fa="استعلام‌های تایید شده" data-zh="已批准查询">استعلام‌های تایید شده</p>
+                                    <p class="text-2xl font-semibold text-gray-800">187</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="flex items-center">
+                                    <span class="text-green-500 text-sm font-semibold">+8%</span>
+                                    <span class="text-gray-500 text-sm mr-2" data-en="from last month" data-fa="از ماه گذشته" data-zh="较上月">از ماه گذشته</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-yellow-100 text-yellow-500">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm font-medium text-gray-500" data-en="Pending Inquiries" data-fa="استعلام‌های در انتظار" data-zh="待处理查询">استعلام‌های در انتظار</p>
+                                    <p class="text-2xl font-semibold text-gray-800">42</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="flex items-center">
+                                    <span class="text-red-500 text-sm font-semibold">+24%</span>
+                                    <span class="text-gray-500 text-sm mr-2" data-en="from last month" data-fa="از ماه گذشته" data-zh="较上月">از ماه گذشته</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="flex items-center">
+                                <div class="p-3 rounded-full bg-blue-100 text-blue-500">
+                                    <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                </div>
+                                <div class="mr-4">
+                                    <p class="text-sm font-medium text-gray-500" data-en="Open Tickets" data-fa="تیکت‌های باز" data-zh="未解决工单">تیکت‌های باز</p>
+                                    <p class="text-2xl font-semibold text-gray-800">19</p>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <div class="flex items-center">
+                                    <span class="text-red-500 text-sm font-semibold">-5%</span>
+                                    <span class="text-gray-500 text-sm mr-2" data-en="from last month" data-fa="از ماه گذشته" data-zh="较上月">از ماه گذشته</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Inquiries -->
+                    <div class="bg-white rounded-lg shadow mb-8">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-lg font-semibold text-gray-800" data-en="Recent Inquiries" data-fa="استعلام‌های اخیر" data-zh="最近查询">استعلام‌های اخیر</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="ID" data-fa="شناسه" data-zh="编号">شناسه</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="User" data-fa="کاربر" data-zh="用户">کاربر</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Origin" data-fa="مبدا" data-zh="起点">مبدا</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Destination" data-fa="مقصد" data-zh="目的地">مقصد</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Status" data-fa="وضعیت" data-zh="状态">وضعیت</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Date" data-fa="تاریخ" data-zh="日期">تاریخ</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Actions" data-fa="عملیات" data-zh="操作">عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">INQ-8721</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-4">
+                                                    <div class="text-sm font-medium text-gray-900">علی محمدی</div>
+                                                    <div class="text-sm text-gray-500">ali@example.com</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ایران</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">چین</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full inquiry-status-approved">
+                                                <span data-en="Approved" data-fa="تایید شده" data-zh="已批准">تایید شده</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-25</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Edit" data-fa="ویرایش" data-zh="编辑">ویرایش</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">INQ-8720</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-4">
+                                                    <div class="text-sm font-medium text-gray-900">سارا احمدی</div>
+                                                    <div class="text-sm text-gray-500">sara@example.com</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ایران</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">امارات</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full inquiry-status-draft">
+                                                <span data-en="Draft" data-fa="پیش‌نویس" data-zh="草稿">پیش‌نویس</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-24</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Edit" data-fa="ویرایش" data-zh="编辑">ویرایش</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">INQ-8719</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-4">
+                                                    <div class="text-sm font-medium text-gray-900">رضا کریمی</div>
+                                                    <div class="text-sm text-gray-500">reza@example.com</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">چین</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ایران</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full inquiry-status-rejected">
+                                                <span data-en="Rejected" data-fa="رد شده" data-zh="已拒绝">رد شده</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-23</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Edit" data-fa="ویرایش" data-zh="编辑">ویرایش</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-200">
+                            <a href="#inquiries" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium" data-en="View all inquiries" data-fa="مشاهده همه استعلام‌ها" data-zh="查看所有查询">مشاهده همه استعلام‌ها</a>
+                        </div>
+                    </div>
+
+                    <!-- Recent Tickets -->
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-lg font-semibold text-gray-800" data-en="Recent Tickets" data-fa="تیکت‌های اخیر" data-zh="最近工单">تیکت‌های اخیر</h2>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="ID" data-fa="شناسه" data-zh="编号">شناسه</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Subject" data-fa="موضوع" data-zh="主题">موضوع</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="User" data-fa="کاربر" data-zh="用户">کاربر</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Related Inquiry" data-fa="استعلام مرتبط" data-zh="相关查询">استعلام مرتبط</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Status" data-fa="وضعیت" data-zh="状态">وضعیت</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Priority" data-fa="اولویت" data-zh="优先级">اولویت</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Date" data-fa="تاریخ" data-zh="日期">تاریخ</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Actions" data-fa="عملیات" data-zh="操作">عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">TKT-1234</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-en="Shipping delay issue" data-fa="مشکل تاخیر در ارسال" data-zh="运输延迟问题">مشکل تاخیر در ارسال</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-8 w-8">
+                                                    <img class="h-8 w-8 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-3">
+                                                    <div class="text-sm font-medium text-gray-900">علی محمدی</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">INQ-8721</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ticket-status-open">
+                                                <span data-en="Open" data-fa="باز" data-zh="未解决">باز</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ticket-priority-high">
+                                                <span data-en="High" data-fa="بالا" data-zh="高">بالا</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-25</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Reply" data-fa="پاسخ" data-zh="回复">پاسخ</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">TKT-1233</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-en="Customs clearance question" data-fa="سوال درباره ترخیص گمرکی" data-zh="海关清关问题">سوال درباره ترخیص گمرکی</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-8 w-8">
+                                                    <img class="h-8 w-8 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-3">
+                                                    <div class="text-sm font-medium text-gray-900">سارا احمدی</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">INQ-8720</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ticket-status-open">
+                                                <span data-en="Open" data-fa="باز" data-zh="未解决">باز</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ticket-priority-medium">
+                                                <span data-en="Medium" data-fa="متوسط" data-zh="中">متوسط</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-24</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Reply" data-fa="پاسخ" data-zh="回复">پاسخ</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">TKT-1232</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-en="Package tracking issue" data-fa="مشکل رهگیری بسته" data-zh="包裹跟踪问题">مشکل رهگیری بسته</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-8 w-8">
+                                                    <img class="h-8 w-8 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-3">
+                                                    <div class="text-sm font-medium text-gray-900">رضا کریمی</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">INQ-8719</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ticket-status-closed">
+                                                <span data-en="Closed" data-fa="بسته شده" data-zh="已解决">بسته شده</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ticket-priority-low">
+                                                <span data-en="Low" data-fa="پایین" data-zh="低">پایین</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-23</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-200">
+                            <a href="#tickets" class="text-indigo-600 hover:text-indigo-900 text-sm font-medium" data-en="View all tickets" data-fa="مشاهده همه تیکت‌ها" data-zh="查看所有工单">مشاهده همه تیکت‌ها</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inquiries Content -->
+                <div id="inquiries-content" class="tab-content">
+                    <div class="bg-white rounded-lg shadow mb-8">
+                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                            <h2 class="text-lg font-semibold text-gray-800" data-en="All Inquiries" data-fa="همه استعلام‌ها" data-zh="所有查询">همه استعلام‌ها</h2>
+                            <div class="flex">
+                                <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded ml-2">
+                                    <span data-en="New Inquiry" data-fa="استعلام جدید" data-zh="新查询">استعلام جدید</span>
+                                </button>
+                                <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded flex items-center">
+                                    <svg class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    </svg>
+                                    <span data-en="Export" data-fa="خروجی" data-zh="导出">خروجی</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <div>
+                                    <label for="status-filter" class="block text-sm font-medium text-gray-700 mb-1" data-en="Status" data-fa="وضعیت" data-zh="状态">وضعیت</label>
+                                    <select id="status-filter" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="all" data-en="All" data-fa="همه" data-zh="全部">همه</option>
+                                        <option value="draft" data-en="Draft" data-fa="پیش‌نویس" data-zh="草稿">پیش‌نویس</option>
+                                        <option value="approved" data-en="Approved" data-fa="تایید شده" data-zh="已批准">تایید شده</option>
+                                        <option value="rejected" data-en="Rejected" data-fa="رد شده" data-zh="已拒绝">رد شده</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="date-filter" class="block text-sm font-medium text-gray-700 mb-1" data-en="Date Range" data-fa="بازه زمانی" data-zh="日期范围">بازه زمانی</label>
+                                    <select id="date-filter" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="all" data-en="All Time" data-fa="همه زمان‌ها" data-zh="所有时间">همه زمان‌ها</option>
+                                        <option value="today" data-en="Today" data-fa="امروز" data-zh="今天">امروز</option>
+                                        <option value="week" data-en="This Week" data-fa="این هفته" data-zh="本周">این هفته</option>
+                                        <option value="month" data-en="This Month" data-fa="این ماه" data-zh="本月">این ماه</option>
+                                        <option value="custom" data-en="Custom Range" data-fa="بازه سفارشی" data-zh="自定义范围">بازه سفارشی</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="user-filter" class="block text-sm font-medium text-gray-700 mb-1" data-en="User" data-fa="کاربر" data-zh="用户">کاربر</label>
+                                    <select id="user-filter" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="all" data-en="All Users" data-fa="همه کاربران" data-zh="所有用户">همه کاربران</option>
+                                        <option value="1">علی محمدی</option>
+                                        <option value="2">سارا احمدی</option>
+                                        <option value="3">رضا کریمی</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="search" class="block text-sm font-medium text-gray-700 mb-1" data-en="Search" data-fa="جستجو" data-zh="搜索">جستجو</label>
+                                    <div class="relative rounded-md shadow-sm">
+                                        <input type="text" id="search" class="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="جستجوی استعلام‌ها...">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="ID" data-fa="شناسه" data-zh="编号">شناسه</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="User" data-fa="کاربر" data-zh="用户">کاربر</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Origin" data-fa="مبدا" data-zh="起点">مبدا</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Destination" data-fa="مقصد" data-zh="目的地">مقصد</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Cargo Type" data-fa="نوع محموله" data-zh="货物类型">نوع محموله</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Weight" data-fa="وزن" data-zh="重量">وزن</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Status" data-fa="وضعیت" data-zh="状态">وضعیت</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Date" data-fa="تاریخ" data-zh="日期">تاریخ</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-en="Actions" data-fa="عملیات" data-zh="操作">عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">INQ-8721</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-4">
+                                                    <div class="text-sm font-medium text-gray-900">علی محمدی</div>
+                                                    <div class="text-sm text-gray-500">ali@example.com</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ایران</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">چین</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">الکترونیک</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">500 کیلوگرم</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full inquiry-status-approved">
+                                                <span data-en="Approved" data-fa="تایید شده" data-zh="已批准">تایید شده</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-25</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Edit" data-fa="ویرایش" data-zh="编辑">ویرایش</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">INQ-8720</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-4">
+                                                    <div class="text-sm font-medium text-gray-900">سارا احمدی</div>
+                                                    <div class="text-sm text-gray-500">sara@example.com</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ایران</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">امارات</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">منسوجات</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">200 کیلوگرم</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full inquiry-status-draft">
+                                                <span data-en="Draft" data-fa="پیش‌نویس" data-zh="草稿">پیش‌نویس</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-24</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Edit" data-fa="ویرایش" data-zh="编辑">ویرایش</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">INQ-8719</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10">
+                                                    <img class="h-10 w-10 rounded-full" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236366F1'%3E%3Cpath fill-rule='evenodd' d='M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z' clip-rule='evenodd' /%3E%3C/svg%3E" alt="">
+                                                </div>
+                                                <div class="mr-4">
+                                                    <div class="text-sm font-medium text-gray-900">رضا کریمی</div>
+                                                    <div class="text-sm text-gray-500">reza@example.com</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">چین</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ایران</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">ماشین آلات</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1200 کیلوگرم</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full inquiry-status-rejected">
+                                                <span data-en="Rejected" data-fa="رد شده" data-zh="已拒绝">رد شده</span>
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">1402-03-23</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900 ml-3" data-en="View" data-fa="مشاهده" data-zh="查看">مشاهده</a>
+                                            <a href="#" class="text-indigo-600 hover:text-indigo-900" data-en="Edit" data-fa="ویرایش" data-zh="编辑">ویرایش</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                            <div class="text-sm text-gray-700" data-en="Showing 1 to 3 of 248 results" data-fa="نمایش 1 تا 3 از 248 نتیجه" data-zh="显示第 1 至 3 项结果，共 248 项">
+                                نمایش 1 تا 3 از 248 نتیجه
+                            </div>
+                            <div class="flex-1 flex justify-between sm:justify-start">
+                                <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
